@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --card-bg: rgba(30, 41, 59, 0.85); 
+            --text-main: #f8fafc;
+            --text-muted: #cbd5e1;
+            --accent: #3b82f6; 
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --danger: #ef4444; /* Red color for delete */
+            --star: #fbbf24;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-image: linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.9)), url("/static/bg.jpg");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: var(--text-main);
+            margin: 0;
+            padding: 30px;
+            min-height: 100vh;
+        }
+
+        .top-header {
+            text-align: center;
+            margin-top: {% if movies %} 20px {% else %} 25vh {% endif %};
+            margin-bottom: 40px;
+            transition: margin-top 0.5s ease-in-out;
+        }
+
+        h1 { font-size: 3.5rem; margin: 0 0 20px 0; font-weight: 800; text-shadow: 2px 2px 10px rgba(0,0,0,0.5); }
+
+        .search-box { display: flex; justify-content: center; gap: 10px; max-width: 650px; margin: 0 auto; }
+        .search-box input { flex-grow: 1; padding: 18px 25px; font-size: 1.2rem; border: 2px solid rgba(255,255,255,0.1); border-radius: 50px; background: rgba(15, 23, 42, 0.6); color: white; outline: none; backdrop-filter: blur(10px); box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.3s; }
+        .search-box input:focus { border-color: var(--accent); background: rgba(15, 23, 42, 0.9); }
+        .search-box button { padding: 18px 35px; font-size: 1.2rem; font-weight: 600; background: var(--accent); color: white; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.3s; }
+        .search-box button:hover { background: var(--accent-hover); transform: translateY(-2px); }
+
+        .watched-counter-btn {
+            margin-top: 20px; display: inline-block; padding: 12px 25px; background: rgba(16, 185, 129, 0.2); 
+            border: 2px solid var(--success); color: white; border-radius: 50px; font-size: 1.1rem; font-weight: 600; 
+            cursor: pointer; backdrop-filter: blur(5px); transition: all 0.3s;
+        }
+        .watched-counter-btn:hover { background: var(--success); transform: translateY(-2px); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); }
+
+        .results-container { max-width: 1200px; margin: 0 auto; }
+        .movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 25px; }
+        
+        .movie-card { background: var(--card-bg); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: flex; flex-direction: column; transition: transform 0.3s; }
+        .movie-card:hover { transform: translateY(-10px); }
+        .movie-card img { width: 100%; height: 320px; object-fit: cover; }
+        .movie-info { padding: 20px; display: flex; flex-direction: column; flex-grow: 1; }
+        .movie-title { font-size: 1.2rem; margin: 0 0 5px 0; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); }
+        .movie-year { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 15px; }
+
+        .rating-select, .add-btn, .remove-btn { width: 100%; padding: 10px; border-radius: 8px; font-size: 1rem; cursor: pointer; }
+        .rating-select { background: rgba(0,0,0,0.5); color: white; border: 1px solid rgba(255,255,255,0.2); margin-bottom: 10px; }
+        .add-btn { background: var(--success); color: white; border: none; font-weight: 600; transition: 0.2s; }
+        .add-btn:hover { background: #059669; }
+
+        /* --- THE REMOVE BUTTON --- */
+        .remove-btn { 
+            background: rgba(239, 68, 68, 0.15); 
+            color: var(--danger); 
+            border: 1px solid var(--danger); 
+            font-weight: 600; 
+            margin-top: 15px; 
+            transition: 0.3s; 
+        }
+        .remove-btn:hover { background: var(--danger); color: white; }
+
+        /* --- FULL SCREEN MODAL --- */
+        .modal-overlay {
+            display: none; 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            /* Applying the same background image specifically to the modal! */
+            background-image: linear-gradient(rgba(15, 23, 42, 0.90), rgba(15, 23, 42, 0.98)), url("/static/bg.jpg");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            z-index: 1000; overflow-y: auto; padding: 50px 20px;
+        }
+
+        .modal-content { max-width: 1200px; margin: 0 auto; position: relative; }
+        .close-btn { position: absolute; top: -10px; right: 10px; font-size: 3rem; color: var(--text-muted); cursor: pointer; transition: color 0.3s; line-height: 1; }
+        .close-btn:hover { color: white; }
+        .modal-header { font-size: 2.5rem; border-bottom: 2px solid var(--accent); padding-bottom: 20px; margin-bottom: 30px; margin-top: 0; text-shadow: 2px 2px 10px rgba(0,0,0,0.8); }
+
+    </style>
+</head>
+<body>
+
+    <div class="top-header">
+        <h1>🎬 Movie Tracker</h1>
+        
+        <form action="/search" method="GET" class="search-box">
+            <input type="text" name="movie_query" placeholder="Search for a movie..." value="{{ query if query is defined else '' }}" required>
+            <button type="submit">Search</button>
+        </form>
+
+        <button class="watched-counter-btn" onclick="openModal()">
+            📋 Watched List: {{ watched_list|length }} Movies
+        </button>
+    </div>
+
+    <div class="results-container">
+        {% set watched_titles = watched_list | map(attribute='title') | list %}
+        {% if movies %}
+            <div class="movie-grid">
+                {% for movie in movies %}
+                    {% set already_added = movie.Title in watched_titles %}
+                    <div class="movie-card">
+                        <img src="{{ movie.Poster if movie.Poster != 'N/A' else '/static/bg.jpg' }}" alt="Poster">
+                        <div class="movie-info">
+                            <h3 class="movie-title">{{ movie.Title }}</h3>
+                            <span class="movie-year">{{ movie.Year }}</span>
+
+                            <form action="/add" method="POST" style="margin-top: auto;">
+                                <input type="hidden" name="title" value="{{ movie.Title }}">
+                                <input type="hidden" name="year" value="{{ movie.Year }}">
+                                <input type="hidden" name="poster" value="{{ movie.Poster }}">
+                                <input type="hidden" name="query" value="{{ query if query is defined else '' }}">
+
+                                {% if already_added %}
+                                    <button type="button" class="add-btn" disabled style="background: #475569; cursor: not-allowed; opacity: 0.7;">✓ Already Added</button>
+                                {% else %}
+                                    <select name="rating" class="rating-select">
+                                        <option value="5">⭐⭐⭐⭐⭐ Masterpiece</option>
+                                        <option value="4">⭐⭐⭐⭐ Great</option>
+                                        <option value="3">⭐⭐⭐ Good</option>
+                                        <option value="2">⭐⭐ Okay</option>
+                                        <option value="1">⭐ Bad</option>
+                                    </select>
+                                    <button type="submit" class="add-btn">+ Add</button>
+                                {% endif %}
+                            </form>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% elif query is defined and query %}
+            <p style="text-align: center; color: var(--text-muted); font-size: 1.2rem; margin-top: 40px;">
+                No results found for "<strong>{{ query }}</strong>"
+            </p>
+        {% endif %}
+    </div>
+
+    <div id="watchedModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <h2 class="modal-header">📋 My Watched Movies ({{ watched_list|length }})</h2>
+            
+            {% if watched_list %}
+                <div class="movie-grid">
+                    {% for item in watched_list %}
+                        <div class="movie-card" style="border-color: var(--accent);">
+                            <img src="{{ item['poster'] }}" alt="Watched Poster">
+                            <div class="movie-info">
+                                <h3 class="movie-title">{{ item['title'] }}</h3>
+                                <span class="movie-year">{{ item['year'] }}</span>
+                                <span class="stars" style="font-size: 1.2rem; color: var(--star);">
+                                    {% for i in range(item['rating'] if item['rating'] else 5) %}⭐{% endfor %}
+                                </span>
+                                
+                                <form action="/delete/{{ item['id'] }}" method="POST" style="margin-top: auto;">
+                                    <button type="submit" class="remove-btn">🗑️ Remove</button>
+                                </form>
+
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <h3 style="text-align: center; color: var(--text-muted);">You haven't added any movies yet!</h3>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        function openModal() {
+            document.getElementById("watchedModal").style.display = "block";
+            document.body.style.overflow = "hidden";
+        }
+
+        function closeModal() {
+            document.getElementById("watchedModal").style.display = "none";
+            document.body.style.overflow = "auto";
+        }
+
+        document.getElementById("watchedModal").addEventListener("click", function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        document.addEventListener("keydown", function(e) {
+            if (e.key === "Escape") closeModal();
+        });
+    </script>
+
+</body>
+</html>

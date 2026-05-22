@@ -1,7 +1,5 @@
 # Movie Tracker
 
-#### Video Demo: <https://youtu.be/d-SHzvEHL5k>
-
 #### Description:
 
 I built Movie Tracker because I kept having the same problem — someone would ask me "have you seen
